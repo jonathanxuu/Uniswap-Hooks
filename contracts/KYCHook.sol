@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.0 <0.9.0;
+import {BalanceDelta} from "@uniswap/v4-core/contracts/types/BalanceDelta.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IPoolManager} from "@uniswap/v4-core/contracts/interfaces/IPoolManager.sol";
+import {PoolKey} from "@uniswap/v4-core/contracts/types/PoolKey.sol";
+
 import {Hooks} from "@uniswap/v4-core/contracts/libraries/Hooks.sol";
 
 import {BaseHook} from "./BaseHook.sol";
@@ -29,7 +32,7 @@ contract KYCSwaps is BaseHook, Ownable {
     constructor(
         IPoolManager _poolManager,
         address _kycValidity
-    ) BaseHook(_poolManager) {
+    ) BaseHook(_poolManager) Ownable(tx.origin) {
         kycValidity = IKycValidity(_kycValidity);
     }
 
@@ -64,23 +67,71 @@ contract KYCSwaps is BaseHook, Ownable {
                 beforeSwap: true,
                 afterSwap: false,
                 beforeDonate: false,
-                afterDonate: false
+                afterDonate: false,
+                noOp: false
             });
-    }
-
-    function beforeModifyPosition(
-        address,
-        IPoolManager.PoolKey calldata,
-        IPoolManager.ModifyPositionParams calldata
-    ) external view override poolManagerOnly onlyPermitKYC returns (bytes4) {
-        return BaseHook.beforeModifyPosition.selector;
     }
 
     function beforeSwap(
         address,
-        IPoolManager.PoolKey calldata,
-        IPoolManager.SwapParams calldata
+        PoolKey calldata,
+        IPoolManager.SwapParams calldata,
+        bytes calldata hookData
     ) external view override poolManagerOnly onlyPermitKYC returns (bytes4) {
         return BaseHook.beforeSwap.selector;
     }
+
+    function beforeInitialize(
+        address sender,
+        PoolKey calldata key,
+        uint160 sqrtPriceX96,
+        bytes calldata hookData
+    ) external override returns (bytes4) {}
+
+    function afterInitialize(
+        address sender,
+        PoolKey calldata key,
+        uint160 sqrtPriceX96,
+        int24 tick,
+        bytes calldata hookData
+    ) external override returns (bytes4) {}
+
+    function beforeModifyPosition(
+        address sender,
+        PoolKey calldata key,
+        IPoolManager.ModifyPositionParams calldata params,
+        bytes calldata hookData
+    ) external override returns (bytes4) {}
+
+    function afterModifyPosition(
+        address sender,
+        PoolKey calldata key,
+        IPoolManager.ModifyPositionParams calldata params,
+        BalanceDelta delta,
+        bytes calldata hookData
+    ) external override returns (bytes4) {}
+
+    function afterSwap(
+        address sender,
+        PoolKey calldata key,
+        IPoolManager.SwapParams calldata params,
+        BalanceDelta delta,
+        bytes calldata hookData
+    ) external override returns (bytes4) {}
+
+    function beforeDonate(
+        address sender,
+        PoolKey calldata key,
+        uint256 amount0,
+        uint256 amount1,
+        bytes calldata hookData
+    ) external override returns (bytes4) {}
+
+    function afterDonate(
+        address sender,
+        PoolKey calldata key,
+        uint256 amount0,
+        uint256 amount1,
+        bytes calldata hookData
+    ) external override returns (bytes4) {}
 }
